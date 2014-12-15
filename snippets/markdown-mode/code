@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+#name : Code block
+#key : cdblk
+#contributor: Filip Szufnarowski
+# --
+~~~{${1:.cpp}}
+$0
+~~~

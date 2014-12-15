@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: dox
+# key: dx
+# --
+/*!
+  $0
+
+  $1
+ */

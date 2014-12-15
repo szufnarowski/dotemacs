@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: doxf
+# key: df
+# --
+/*!
+  $0
+  \param[in] $1
+  \return $2
+ */

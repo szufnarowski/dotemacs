@@ -1,0 +1,16 @@
+# -*- mode: snippet -*-
+# name: doxc
+# key: dc
+# --
+/*!
+ * \class $0
+ *
+ * \ingroup ${1:PackageName}
+ * (Note, this needs exactly one \defgroup somewhere)
+ *
+ * \brief $2
+ *
+ * $3
+ *
+ * \note $4
+ */

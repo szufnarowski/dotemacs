@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: doxa
+# key: da
+# --
+/**< $0 */
