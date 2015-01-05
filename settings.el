@@ -41,6 +41,7 @@
     helm
     helm-gtags
     helm-swoop
+    helm-projectile
     function-args
     clean-aindent-mode
     comment-dwim-2
@@ -65,6 +66,7 @@
     buffer-move
     framemove
     linum-relative
+    markdown-mode
     ;magit
 
     ;jedi
@@ -906,6 +908,9 @@ inc
 
 (require 'projectile)
 (projectile-global-mode)
+(setq projectile-completion-system 'helm)
+(helm-projectile-on)
+(setq projectile-indexing-method 'alien)
 (setq projectile-enable-caching t)
 
 (custom-set-variables 
