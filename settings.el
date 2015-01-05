@@ -18,6 +18,14 @@
  (interactive)
  (load-file (concat user-emacs-directory "init.el"))))
 
+;; read file content, use with split string to get a list of lines
+(defun slurp (f)
+  (with-temp-buffer
+    (insert-file-contents f)
+    (buffer-substring-no-properties
+       (point-min)
+       (point-max))))
+
 ;; proxy - cntlm
 (setq url-proxy-services '(("http" . "127.0.0.1:3128")))
 
@@ -760,6 +768,11 @@ Position the cursor at it's beginning, according to the current mode."
 (define-key helm-gtags-mode-map (kbd "M-,") 'helm-gtags-pop-stack)
 (define-key helm-gtags-mode-map (kbd "C-c <") 'helm-gtags-previous-history)
 (define-key helm-gtags-mode-map (kbd "C-c >") 'helm-gtags-next-history)
+(define-key helm-gtags-mode-map (kbd "C-c g s") 'helm-gtags-find-symbol)
+(define-key helm-gtags-mode-map (kbd "C-c g t") 'helm-gtags-find-tag)
+(define-key helm-gtags-mode-map (kbd "C-c g r") 'helm-gtags-find-rtag)
+(define-key helm-gtags-mode-map (kbd "C-c g f") 'helm-gtags-find-file)
+(define-key helm-gtags-mode-map (kbd "C-c g d") 'helm-gtags-visit-rootdir)
 
 ;; Redefine Helm-Gtags functions in order to have support for project-specific GTAGS
 (defun helm-gtags--find-tag-simple ()
@@ -861,17 +874,21 @@ Position the cursor at it's beginning, according to the current mode."
 (defvar cpp-system-includes (split-string
                              ;; Output of echo "" | g++ -v -x c++ -E -
                              ;; Use absolute paths
-                             "
-c:/mingw/lib/gcc/mingw32/4.8.1/include/c++
-c:/mingw/lib/gcc/mingw32/4.8.1/include/c++/mingw32
-c:/mingw/lib/gcc/mingw32/4.8.1/include/c++/backward
-c:/mingw/lib/gcc/mingw32/4.8.1/include
-c:/mingw/include
-c:/mingw/lib/gcc/mingw32/4.8.1/include-fixed
-c:/mingw/mingw32/include
-"
-                             ))
+(slurp (concat my-project-dir ".global-includes"))))
 
+(require 'company-c-headers)
+(add-to-list 'company-backends 'company-c-headers)
+(setq company-c-headers-path-system nil company-c-headers-path-user nil)
+(semantic-reset-system-include 'c++-mode)
+(semantic-gcc-setup)
+
+;; Global includes
+(mapc (lambda (x)
+          (add-to-list 'company-c-headers-path-system x)
+          (semantic-add-system-include x 'c++-mode))
+        cpp-system-includes)
+
+;; Local includes (below in projectile per project)
 (defvar cpp-local-includes (split-string
                             "
 .
@@ -880,17 +897,16 @@ inc
 "
                             ))
 
-(require 'company-c-headers)
-(add-to-list 'company-backends 'company-c-headers)
-(setq company-c-headers-path-system nil company-c-headers-path-user nil)
-(semantic-reset-system-include 'c++-mode)
-(semantic-gcc-setup)
-(mapcar (lambda (x)
-          (add-to-list 'company-c-headers-path-system x)
-          (semantic-add-system-include x 'c++-mode))
-        cpp-system-includes)
+(add-hook 'c++-mode-hook
+(lambda ()
+(hack-local-variables)
+(let ((file (concat default-directory ".local-includes")))
+(when (file-exists-p file)
+(mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
+(split-string (slurp file)))))))
 
-(mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
+;; (defvar cpp-local-includes (list "." "inc"))
+;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
 ;; For Cedet
 ;; Project settings for CEDET
 (load (concat my-project-dir "projects.el"))
