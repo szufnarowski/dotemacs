@@ -122,6 +122,9 @@
 (defvar custom-directory-packages
   (concat user-emacs-directory "site-packages"))
 
+;; Custom packages dir, not sourced from online repos or modified manually
+(add-to-list 'load-path (concat user-emacs-directory "site-packages"))
+
 (defun install-packages ()
   "Install all required packages."
   (interactive)
@@ -194,6 +197,9 @@
 					:weight 'normal)
 (global-set-key (kbd "C-c w") 'whitespace-mode)
 
+
+;; Enable narrowing to region permanently
+(put 'narrow-to-region 'disabled nil)
 
 #+END_SRC
 
@@ -454,7 +460,7 @@
 
 ;; PACKAGE: duplicate-thing
 (require 'duplicate-thing)
-(global-set-key (kbd "M-c") 'duplicate-thing)
+(global-set-key (kbd "C-c d") 'duplicate-thing)
 
 ;; Customized functions
 (defun prelude-move-beginning-of-line (arg)
@@ -1004,7 +1010,17 @@ inc
 #+BEGIN_SRC emacs-lisp
 (add-hook 'c-mode-common-hook 'hs-minor-mode)
 #+END_SRC
-    
+*** Member functions
+#+BEGIN_SRC emacs-lisp
+;; Member functions
+(require 'member-functions)
+;; Make to body of mf--infer-c-filename (buffer-name (ido-switch-buffer))
+;; Comment out (find-file-noselect [header|c-file]) in expand-member-functions
+(setq mf--source-file-extension "cpp")
+(add-hook 'c-mode-common-hook
+		  (lambda ()
+			(local-set-key "\C-cm" #'expand-member-functions)))
+#+END_SRC   
 ** GDB
 #+BEGIN_SRC emacs-lisp
 ;; setup GDB
@@ -1097,14 +1113,5 @@ projectile-project-root-files-bottom-up
 ;			(add-to-list 'write-file-functions
 ;						 'delete-trailing-whitespace)))
 
-
-;; Member functions
-;(require 'member-functions)
-;; Make to body of mf--infer-c-filename (buffer-name (ido-switch-buffer))
-;; Comment out (find-file-noselect [header|c-file]) in expand-member-functions
-;(setq mf--source-file-extension "cpp")
-;(add-hook 'c-mode-common-hook
-;		  (lambda ()
-;			(local-set-key "\C-cm" #'expand-member-functions)))
 
 #+END_SRC
