@@ -263,7 +263,10 @@
 #+END_SRC
 ** Windmove
 #+BEGIN_SRC emacs-lisp
+(require 'framemove)
+(require 'buffer-move)
 (windmove-default-keybindings)
+(setq framemove-hook-into-windmove t)
 ;; Make windmove work in org-mode:
 (add-hook 'org-shiftup-final-hook 'windmove-up)
 (add-hook 'org-shiftleft-final-hook 'windmove-left)
