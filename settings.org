@@ -65,80 +65,83 @@
    
 ** Package list
 #+begin_src emacs-lisp
-(defconst demo-packages
-  '(anzu
-    company
-    company-c-headers
-    duplicate-thing
-    ggtags
-    helm
-    helm-gtags
-    helm-swoop
-    helm-projectile
-    function-args
-    clean-aindent-mode
-    comment-dwim-2
-    dtrt-indent
-    ws-butler
-    iedit
-    yasnippet
-    smartparens
-    sml-mode
-    projectile
-    volatile-highlights
-    undo-tree
-    zygospore
-    sr-speedbar
-    frame-cmds
-    expand-region
-    highlight-current-line
-    highlight-indentation
-    iedit
-    ;find-file-in-repository
-    flycheck
-    buffer-move
-    framemove
-    linum-relative
-    markdown-mode
-    ;magit
+  (defconst demo-packages
+    '(anzu
+      company
+      company-c-headers
+      duplicate-thing
+      ggtags
+      helm
+      helm-gtags
+      helm-swoop
+      helm-projectile
+      function-args
+      clean-aindent-mode
+      comment-dwim-2
+      dtrt-indent
+      ws-butler
+      iedit
+      yasnippet
+      smartparens
+      sml-mode
+      projectile
+      volatile-highlights
+      undo-tree
+      zygospore
+      sr-speedbar
+      frame-cmds
+      expand-region
+      highlight-current-line
+      highlight-indentation
+      iedit
+      ;find-file-in-repository
+      flycheck
+      buffer-move
+      framemove
+      linum-relative
+      markdown-mode
+      htmlize
+      dirtree
+      neotree
+      ;magit
 
-    ;jedi
-    ;jedi-direx
-    ;ein
+      ;jedi
+      ;jedi-direx
+      ;ein
 
-    ;fill-column-indicator
-    ;flymake-google-cpplint
-    ;google-c-style
-    ;flymake-cursor
+      ;fill-column-indicator
+      ;flymake-google-cpplint
+      ;google-c-style
+      ;flymake-cursor
 
-    ;virtualenvwrapper
-    ;python-mode
-    ;pos-tip
-    ;request
-    ;websocket
-)
-"List of packages to install.")
+      ;virtualenvwrapper
+      ;python-mode
+      ;pos-tip
+      ;request
+      ;websocket
+  )
+  "List of packages to install.")
 
-(defvar custom-directory-packages
-  (concat user-emacs-directory "site-packages"))
+  (defvar custom-directory-packages
+    (concat user-emacs-directory "site-packages"))
 
-;; Custom packages dir, not sourced from online repos or modified manually
-(add-to-list 'load-path (concat user-emacs-directory "site-packages"))
+  ;; Custom packages dir, not sourced from online repos or modified manually
+  (add-to-list 'load-path (concat user-emacs-directory "site-packages"))
 
-(defun install-packages ()
-  "Install all required packages."
-  (interactive)
-  (unless package-archive-contents
-    (package-refresh-contents))
-  (dolist (package demo-packages)
-    (unless (package-installed-p package)
-      (package-install package))))
+  (defun install-packages ()
+    "Install all required packages."
+    (interactive)
+    (unless package-archive-contents
+      (package-refresh-contents))
+    (dolist (package demo-packages)
+      (unless (package-installed-p package)
+        (package-install package))))
 
-(install-packages)
+  (install-packages)
 
-;; Use latest development version of Cedet
-(load-file (concat user-emacs-directory "/cedet/cedet-devel-load.el"))
-(load-file (concat user-emacs-directory "cedet/contrib/cedet-contrib-load.el"))
+  ;; Use latest development version of Cedet
+  (load-file (concat user-emacs-directory "/cedet/cedet-devel-load.el"))
+  (load-file (concat user-emacs-directory "cedet/contrib/cedet-contrib-load.el"))
 #+end_src
    
 * External customizations
@@ -278,6 +281,21 @@
 (add-hook 'org-shiftleft-final-hook 'windmove-left)
 (add-hook 'org-shiftdown-final-hook 'windmove-down)
 (add-hook 'org-shiftright-final-hook 'windmove-right)
+#+END_SRC
+** Directory tree view
+#+BEGIN_SRC emacs-lisp
+(define-derived-mode dirtree-mode tree-mode "Dir-Tree"
+  "A mode to display tree of directory"
+  (tree-widget-set-theme "ascii")) ; does not work...
+
+(custom-set-variables 
+'(neo-theme 'ascii))
+
+
+(defcustom neo-theme
+  '(coffee-mode python-mode slim-mode haml-mode yaml-mode)
+  "Modes for which auto-indenting is suppressed."
+  :type 'list)
 #+END_SRC
 * Editing
 ** Emails / Abbreviations
@@ -629,6 +647,8 @@ Position the cursor at it's beginning, according to the current mode."
  'org-babel-load-languages
  '((emacs-lisp . t)
    (ditaa . t)))
+(setq org-src-fontify-natively t)
+(setq org-src-tab-acts-natively t)
 #+END_SRC
 * Autocomplete
 ** Company

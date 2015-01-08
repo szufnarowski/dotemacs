@@ -97,6 +97,9 @@
 (defvar custom-directory-packages
   (concat user-emacs-directory "site-packages"))
 
+;; Custom packages dir, not sourced from online repos or modified manually
+(add-to-list 'load-path (concat user-emacs-directory "site-packages"))
+
 (defun install-packages ()
   "Install all required packages."
   (interactive)
@@ -162,6 +165,10 @@
                                         :weight 'normal)
 (global-set-key (kbd "C-c w") 'whitespace-mode)
 
+
+;; Enable narrowing to region permanently
+(put 'narrow-to-region 'disabled nil)
+
 ;; German characters
 (global-set-key [225] (lambda () (interactive) (ucs-insert #x00e4))) ; ä
 (global-set-key [233] (lambda () (interactive) (ucs-insert #x00eb))) ; ë
@@ -221,7 +228,10 @@
 
 (global-set-key [kp-enter] 'toggle-window-dedicated)
 
+(require 'framemove)
+(require 'buffer-move)
 (windmove-default-keybindings)
+(setq framemove-hook-into-windmove t)
 ;; Make windmove work in org-mode:
 (add-hook 'org-shiftup-final-hook 'windmove-up)
 (add-hook 'org-shiftleft-final-hook 'windmove-left)
@@ -400,7 +410,7 @@
 
 ;; PACKAGE: duplicate-thing
 (require 'duplicate-thing)
-(global-set-key (kbd "M-c") 'duplicate-thing)
+(global-set-key (kbd "C-c d") 'duplicate-thing)
 
 ;; Customized functions
 (defun prelude-move-beginning-of-line (arg)
@@ -913,6 +923,15 @@ inc
 
 (add-hook 'c-mode-common-hook 'hs-minor-mode)
 
+;; Member functions
+(require 'member-functions)
+;; Make to body of mf--infer-c-filename (buffer-name (ido-switch-buffer))
+;; Comment out (find-file-noselect [header|c-file]) in expand-member-functions
+(setq mf--source-file-extension "cpp")
+(add-hook 'c-mode-common-hook
+                  (lambda ()
+                        (local-set-key "\C-cm" #'expand-member-functions)))
+
 ;; setup GDB
 (setq
  ;; use gdb-many-windows by default
@@ -994,13 +1013,3 @@ projectile-project-root-files-bottom-up
 ;                        '(require-final-newline t))
 ;                       (add-to-list 'write-file-functions
 ;                                                'delete-trailing-whitespace)))
-
-
-;; Member functions
-;(require 'member-functions)
-;; Make to body of mf--infer-c-filename (buffer-name (ido-switch-buffer))
-;; Comment out (find-file-noselect [header|c-file]) in expand-member-functions
-;(setq mf--source-file-extension "cpp")
-;(add-hook 'c-mode-common-hook
-;                 (lambda ()
-;                       (local-set-key "\C-cm" #'expand-member-functions)))
