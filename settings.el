@@ -75,6 +75,10 @@
     framemove
     linum-relative
     markdown-mode
+    htmlize
+    dirtree
+    neotree
+    multiple-cursors
     ;magit
 
     ;jedi
@@ -237,6 +241,19 @@
 (add-hook 'org-shiftleft-final-hook 'windmove-left)
 (add-hook 'org-shiftdown-final-hook 'windmove-down)
 (add-hook 'org-shiftright-final-hook 'windmove-right)
+
+(define-derived-mode dirtree-mode tree-mode "Dir-Tree"
+  "A mode to display tree of directory"
+  (tree-widget-set-theme "ascii")) ; does not work...
+
+(custom-set-variables 
+'(neo-theme 'ascii))
+
+
+(defcustom neo-theme
+  '(coffee-mode python-mode slim-mode haml-mode yaml-mode)
+  "Modes for which auto-indenting is suppressed."
+  :type 'list)
 
 ;; Abreviations for emails
 (setq abbrev-file-name
@@ -576,6 +593,8 @@ Position the cursor at it's beginning, according to the current mode."
  'org-babel-load-languages
  '((emacs-lisp . t)
    (ditaa . t)))
+(setq org-src-fontify-natively t)
+(setq org-src-tab-acts-natively t)
 
 (require 'company)
 (add-hook 'after-init-hook 'global-company-mode)

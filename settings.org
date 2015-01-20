@@ -80,7 +80,6 @@
       comment-dwim-2
       dtrt-indent
       ws-butler
-      iedit
       yasnippet
       smartparens
       sml-mode
@@ -103,6 +102,7 @@
       htmlize
       dirtree
       neotree
+      multiple-cursors
       ;magit
 
       ;jedi
@@ -305,7 +305,8 @@
 (concat user-emacs-directory "abbrev_defs.el"))
 (if (file-exists-p abbrev-file-name)
     (quietly-read-abbrev-file))
-(add-hook 'text-mode-hook 'abbrev-mode)
+;(add-hook 'text-mode-hook 'abbrev-mode)
+(add-to-list 'auto-mode-alist '("\\.outlook\\'" . abbrev-mode))
 #+END_SRC
 ** Ibuffer
 #+BEGIN_SRC emacs-lisp
@@ -316,11 +317,31 @@
 #+END_SRC   
 ** Spellcheck
 #+BEGIN_SRC emacs-lisp
-;; Use spell check by default
-(setq-default ispell-program-name "C:/Tools/Aspell/bin/aspell.exe")
-(setq text-mode-hook '(lambda() (flyspell-mode t) ))
-(setq prog-mode-hook '(lambda() (flyspell-mode t) ))
-#+END_SRC   
+  ;; Use spell check by default
+  (setq-default ispell-program-name "C:/Tools/Aspell/bin/aspell.exe")
+  (setq text-mode-hook '(lambda() (flyspell-mode t) ))
+  (setq prog-mode-hook '(lambda() (flyspell-prog-mode) ))
+;; switch between english and german
+  (defun fd-switch-dictionary()
+    (interactive)
+    (let* ((dic ispell-current-dictionary)
+           (change (if (string= dic "deutsch8") "english" "deutsch8")))
+      (ispell-change-dictionary change)
+      (message "Dictionary switched from %s to %s" dic change)
+      ))
+
+  (global-set-key (kbd "<f8>")   'fd-switch-dictionary)  
+(eval-after-load "flyspell"
+  '(define-key flyspell-mode-map (kbd "C-;") nil)) ; use for iedit
+#+END_SRC
+** Multiple cursors
+#+BEGIN_SRC emacs-lisp
+(require 'multiple-cursors)
+(global-set-key (kbd "C-S-c C-S-c") 'mc/edit-lines)
+(global-set-key (kbd "C->") 'mc/mark-next-like-this)
+(global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+(global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
+#+END_SRC
 ** Other ...
 #+begin_src emacs-lisp
 ;;(setq fill-column 70)
@@ -640,7 +661,7 @@ Position the cursor at it's beginning, according to the current mode."
 (global-set-key (kbd "M-o") 'prelude-smart-open-line)
 (global-set-key (kbd "M-o") 'open-line)
 #+end_src
-
+   
 * Org
 #+BEGIN_SRC emacs-lisp
 (org-babel-do-load-languages
@@ -649,12 +670,39 @@ Position the cursor at it's beginning, according to the current mode."
    (ditaa . t)))
 (setq org-src-fontify-natively t)
 (setq org-src-tab-acts-natively t)
+;; For keeping buffers up-to-date with tangled files
+;; (global-auto-revert-mode t)
+(defun revert-all-buffers ()
+"Refreshes all open buffers from their respective files"
+(interactive)
+(let* ((list (buffer-list))
+(buffer (car list)))
+(while buffer
+(when (and (buffer-file-name buffer)
+(not (buffer-modified-p buffer)))
+(set-buffer buffer)
+(revert-buffer t t t))
+(setq list (cdr list))
+(setq buffer (car list))))
+(message "Refreshed open files"))
+;; For tangling code automatically when saving org-files
+(defun tangle-on-save ()
+"Extract source code from org-files upon saving."
+(message "Tangling sources...")
+(org-babel-tangle)
+(revert-all-buffers))
+(add-hook 'org-mode-hook
+(lambda ()
+(add-hook 'after-save-hook
+'tangle-on-save 'make-it-local)))
 #+END_SRC
 * Autocomplete
 ** Company
 #+begin_src emacs-lisp
 (require 'company)
 (add-hook 'after-init-hook 'global-company-mode)
+(require 'company-keywords)
+(add-to-list 'company-backends 'company-keywords)
 ;; (setq company-backends (delete 'company-semantic company-backends))
 #+end_src
 ** Yasnippet
@@ -1076,6 +1124,8 @@ projectile-project-root-files-bottom-up
     )
 )
 )
+
+(add-to-list 'projectile-other-file-alist '("org" . ("h" "cpp" "c" "py")))
 
 #+END_SRC
 ** Markdown
