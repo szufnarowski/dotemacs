@@ -55,7 +55,6 @@
     comment-dwim-2
     dtrt-indent
     ws-butler
-    iedit
     yasnippet
     smartparens
     sml-mode
@@ -255,12 +254,15 @@
   "Modes for which auto-indenting is suppressed."
   :type 'list)
 
+(global-set-key (kbd "C-c t") 'sr-speedbar-toggle)
+
 ;; Abreviations for emails
 (setq abbrev-file-name
 (concat user-emacs-directory "abbrev_defs.el"))
 (if (file-exists-p abbrev-file-name)
     (quietly-read-abbrev-file))
-(add-hook 'text-mode-hook 'abbrev-mode)
+;(add-hook 'text-mode-hook 'abbrev-mode)
+(add-to-list 'auto-mode-alist '("\\.outlook\\'" . abbrev-mode))
 
 ;(require 'ibuffer)
 ;(global-set-key (kbd "C-x C-b") 'ibuffer-other-window) ;'ibuffer)
@@ -268,9 +270,37 @@
 ;(setq ibuffer-default-sorting-mode 'major-mode)
 
 ;; Use spell check by default
-(setq-default ispell-program-name "C:/Tools/Aspell/bin/aspell.exe")
-(setq text-mode-hook '(lambda() (flyspell-mode t) ))
-(setq prog-mode-hook '(lambda() (flyspell-mode t) ))
+  (setq-default ispell-program-name "C:/Tools/Aspell/bin/aspell.exe")
+  (setq text-mode-hook '(lambda() (flyspell-mode t) ))
+  (setq prog-mode-hook '(lambda() (flyspell-prog-mode) ))
+;; switch between english and german
+  (defun fd-switch-dictionary()
+    (interactive)
+    (let* ((dic ispell-current-dictionary)
+           (change (if (string= dic "deutsch8") "english" "deutsch8")))
+      (ispell-change-dictionary change)
+      (message "Dictionary switched from %s to %s" dic change)
+      ))
+
+  (global-set-key (kbd "<f8>")   'fd-switch-dictionary)  
+(eval-after-load "flyspell"
+  '(define-key flyspell-mode-map (kbd "C-;") nil)) ; use for iedit
+
+(require 'multiple-cursors)
+(global-set-key (kbd "C-S-c C-S-c") 'mc/edit-lines)
+(global-set-key (kbd "C-S-c a") 'mc/edit-beginnings-of-lines)
+(global-set-key (kbd "C-S-c e") 'mc/edit-ends-of-lines)
+(global-set-key (kbd "C->") 'mc/mark-next-like-this)
+(global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
+(global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
+
+(setq mc/cmds-to-run-for-all mc--default-cmds-to-run-for-all)
+
+(defun open-buffer-path ()
+"Run explorer on the directory of the current buffer."
+(interactive)
+(shell-command (concat "explorer " (replace-regexp-in-string "/" "\\" (file-name-directory (buffer-file-name)) t t))))
+(global-set-key [f12] 'open-buffer-path)
 
 ;;(setq fill-column 70)
 (setq-default default-tab-width 4)
@@ -595,9 +625,36 @@ Position the cursor at it's beginning, according to the current mode."
    (ditaa . t)))
 (setq org-src-fontify-natively t)
 (setq org-src-tab-acts-natively t)
+;; For keeping buffers up-to-date with tangled files
+;; (global-auto-revert-mode t)
+(defun revert-all-buffers ()
+"Refreshes all open buffers from their respective files"
+(interactive)
+(let* ((list (buffer-list))
+(buffer (car list)))
+(while buffer
+(when (and (buffer-file-name buffer)
+(not (buffer-modified-p buffer)))
+(set-buffer buffer)
+(revert-buffer t t t))
+(setq list (cdr list))
+(setq buffer (car list))))
+(message "Refreshed open files"))
+;; For tangling code automatically when saving org-files
+(defun tangle-on-save ()
+"Extract source code from org-files upon saving."
+(message "Tangling sources...")
+(org-babel-tangle)
+(revert-all-buffers))
+(add-hook 'org-mode-hook
+(lambda ()
+(add-hook 'after-save-hook
+'tangle-on-save 'make-it-local)))
 
 (require 'company)
 (add-hook 'after-init-hook 'global-company-mode)
+(require 'company-keywords)
+(add-to-list 'company-backends 'company-keywords)
 ;; (setq company-backends (delete 'company-semantic company-backends))
 
 ;; Package: yasnippet
@@ -894,6 +951,14 @@ Position the cursor at it's beginning, according to the current mode."
 (define-key c-mode-map  [(shift tab)] 'company-complete)
 (define-key c++-mode-map  [(shift tab)] 'company-complete)
 
+(add-hook 'c++-mode-hook
+(lambda ()
+(hack-local-variables)
+  (let ((dd (expand-file-name default-directory)))
+           (setenv "GTAGSROOT" (directory-file-name dd))
+           (setenv "GTAGSLIBPATH" (concat dd ".ext"))
+           (setenv "GTAGSDBPATH" (concat dd ".loc")))))
+
 (require 'function-args)
 (fa-config-default)
 (define-key c-mode-map  [(ctrl tab)] 'moo-complete)
@@ -904,19 +969,6 @@ Position the cursor at it's beginning, according to the current mode."
                              ;; Output of echo "" | g++ -v -x c++ -E -
                              ;; Use absolute paths
 (slurp (concat my-project-dir ".global-includes"))))
-
-(require 'company-c-headers)
-(add-to-list 'company-backends 'company-c-headers)
-(setq company-c-headers-path-system nil company-c-headers-path-user nil)
-(semantic-reset-system-include 'c++-mode)
-(semantic-gcc-setup)
-
-;; Global includes
-(mapc (lambda (x)
-          (add-to-list 'company-c-headers-path-system x)
-          (semantic-add-system-include x 'c++-mode))
-        cpp-system-includes)
-
 ;; Local includes (below in projectile per project)
 (defvar cpp-local-includes (split-string
                             "
@@ -926,13 +978,29 @@ inc
 "
                             ))
 
+(require 'company-c-headers)
+(add-to-list 'company-backends 'company-c-headers)
+(setq company-c-headers-path-system nil company-c-headers-path-user nil)
+(semantic-reset-system-include 'c++-mode)
+(semantic-gcc-setup)
+
+;; Global includes
+;; (mapc (lambda (x)
+;;           (add-to-list 'company-c-headers-path-system x)
+;;           (semantic-add-system-include x 'c++-mode))
+;;         cpp-system-includes)
+
 (add-hook 'c++-mode-hook
 (lambda ()
 (hack-local-variables)
-(let ((file (concat default-directory ".local-includes")))
-(when (file-exists-p file)
+(let ((local (concat default-directory ".local-includes"))
+      (global (concat default-directory ".local-includes")))
+(when (file-exists-p local)
 (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
-(split-string (slurp file)))))))
+      (split-string (slurp local))))
+(when (file-exists-p global)
+  (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
+        (split-string (slurp global)))))))
 
 ;; (defvar cpp-local-includes (list "." "inc"))
 ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
@@ -981,6 +1049,8 @@ projectile-project-root-files-bottom-up
     )
 )
 )
+
+(add-to-list 'projectile-other-file-alist '("org" . ("h" "cpp" "c" "py")))
 
 (autoload 'markdown-mode "markdown-mode"
    "Major mode for editing Markdown files" t)

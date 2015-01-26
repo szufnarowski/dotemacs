@@ -297,6 +297,10 @@
   "Modes for which auto-indenting is suppressed."
   :type 'list)
 #+END_SRC
+** Speedbar
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c t") 'sr-speedbar-toggle)
+#+END_SRC
 * Editing
 ** Emails / Abbreviations
 #+BEGIN_SRC emacs-lisp
@@ -338,9 +342,25 @@
 #+BEGIN_SRC emacs-lisp
 (require 'multiple-cursors)
 (global-set-key (kbd "C-S-c C-S-c") 'mc/edit-lines)
+(global-set-key (kbd "C-S-c a") 'mc/edit-beginnings-of-lines)
+(global-set-key (kbd "C-S-c e") 'mc/edit-ends-of-lines)
 (global-set-key (kbd "C->") 'mc/mark-next-like-this)
 (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
 (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
+
+(setq mc/cmds-to-run-for-all mc--default-cmds-to-run-for-all)
+#+END_SRC
+** Open windows explorer
+#+BEGIN_SRC emacs-lisp
+(defun explorer ()
+  "Launch the windows explorer in the current directory and selects current file"
+  (interactive)
+  (w32-shell-execute
+   "open"
+   "explorer"
+   (concat "/e,/select," (convert-standard-filename buffer-file-name))))
+(global-set-key [f12] 'explorer)
+
 #+END_SRC
 ** Other ...
 #+begin_src emacs-lisp
@@ -1023,6 +1043,16 @@ Position the cursor at it's beginning, according to the current mode."
 (define-key c-mode-map  [(shift tab)] 'company-complete)
 (define-key c++-mode-map  [(shift tab)] 'company-complete)
 #+end_src
+*** Gtags
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'c++-mode-hook
+(lambda ()
+(hack-local-variables)
+  (let ((dd (expand-file-name default-directory)))
+           (setenv "GTAGSROOT" (directory-file-name dd))
+           (setenv "GTAGSLIBPATH" (concat dd ".ext"))
+           (setenv "GTAGSDBPATH" (concat dd ".loc")))))
+#+END_SRC
 *** Function arguments
 #+begin_src emacs-lisp
 (require 'function-args)
@@ -1032,46 +1062,49 @@ Position the cursor at it's beginning, according to the current mode."
 #+end_src
 *** Headers
 #+begin_src emacs-lisp
-;; company-c-headers
-(defvar cpp-system-includes (split-string
-                             ;; Output of echo "" | g++ -v -x c++ -E -
-                             ;; Use absolute paths
-(slurp (concat my-project-dir ".global-includes"))))
+  ;; company-c-headers
+  (defvar cpp-system-includes (split-string
+                               ;; Output of echo "" | g++ -v -x c++ -E -
+                               ;; Use absolute paths
+  (slurp (concat my-project-dir ".global-includes"))))
+  ;; Local includes (below in projectile per project)
+  (defvar cpp-local-includes (split-string
+                              "
+  .
+  inc
+  .ext
+  "
+                              ))
 
-(require 'company-c-headers)
-(add-to-list 'company-backends 'company-c-headers)
-(setq company-c-headers-path-system nil company-c-headers-path-user nil)
-(semantic-reset-system-include 'c++-mode)
-(semantic-gcc-setup)
+  (require 'company-c-headers)
+  (add-to-list 'company-backends 'company-c-headers)
+  (setq company-c-headers-path-system nil company-c-headers-path-user nil)
+  (semantic-reset-system-include 'c++-mode)
+  (semantic-gcc-setup)
 
-;; Global includes
-(mapc (lambda (x)
-          (add-to-list 'company-c-headers-path-system x)
-          (semantic-add-system-include x 'c++-mode))
-        cpp-system-includes)
+  ;; Global includes
+  ;; (mapc (lambda (x)
+  ;;           (add-to-list 'company-c-headers-path-system x)
+  ;;           (semantic-add-system-include x 'c++-mode))
+  ;;         cpp-system-includes)
 
-;; Local includes (below in projectile per project)
-(defvar cpp-local-includes (split-string
-                            "
-.
-inc
-.ext
-"
-                            ))
+  (add-hook 'c++-mode-hook
+  (lambda ()
+  (hack-local-variables)
+  (let ((local (concat default-directory ".local-includes"))
+        (global (concat default-directory ".local-includes")))
+  (when (file-exists-p local)
+  (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
+        (split-string (slurp local))))
+  (when (file-exists-p global)
+    (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
+          (split-string (slurp global)))))))
 
-(add-hook 'c++-mode-hook
-(lambda ()
-(hack-local-variables)
-(let ((file (concat default-directory ".local-includes")))
-(when (file-exists-p file)
-(mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
-(split-string (slurp file)))))))
-
-;; (defvar cpp-local-includes (list "." "inc"))
-;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
-;; For Cedet
-;; Project settings for CEDET
-(load (concat my-project-dir "projects.el"))
+  ;; (defvar cpp-local-includes (list "." "inc"))
+  ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
+  ;; For Cedet
+  ;; Project settings for CEDET
+  (load (concat my-project-dir "projects.el"))
 
 #+end_src
 *** Code folding
