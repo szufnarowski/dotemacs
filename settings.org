@@ -1125,7 +1125,7 @@ Position the cursor at it's beginning, according to the current mode."
     ;; For Cedet
     ;; Project settings for CEDET
     (load (concat my-project-dir "projects.el"))
-  )
+  
 #+end_src
 *** Code folding
 #+BEGIN_SRC emacs-lisp
