@@ -140,7 +140,7 @@
   (install-packages)
 
   ;; Use latest development version of Cedet
-  (load-file (concat user-emacs-directory "/cedet/cedet-devel-load.el"))
+  (load-file (concat user-emacs-directory "cedet/cedet-devel-load.el"))
   (load-file (concat user-emacs-directory "cedet/contrib/cedet-contrib-load.el"))
 #+end_src
    
@@ -155,6 +155,12 @@
 ** General
 #+BEGIN_SRC emacs-lisp
 (setq frame-title-format "Editing - %b")
+
+;; Keep track of recently opened-files
+(require 'recentf)
+(recentf-mode t)
+(setq recentf-max-saved-items 50)
+(global-set-key (kbd "C-x C-r") 'helm-recentf)
 
 ;; Simplistic interface
 ;; No start-up messages nor splashes
@@ -350,8 +356,14 @@
 
 (setq mc/cmds-to-run-for-all mc--default-cmds-to-run-for-all)
 #+END_SRC
-** Open windows explorer
+** Windows
 #+BEGIN_SRC emacs-lisp
+(defun show-file-name ()
+  "Show the full path file name in the minibuffer."
+  (interactive)
+  (message (buffer-file-name)))
+(global-set-key [C-f1] 'show-file-name)
+
 (defun explorer ()
   "Launch the windows explorer in the current directory and selects current file"
   (interactive)
@@ -684,6 +696,10 @@ Position the cursor at it's beginning, according to the current mode."
    
 * Org
 #+BEGIN_SRC emacs-lisp
+(add-hook 'org-mode-hook
+          (lambda ()
+            (org-indent-mode t))
+          t)
 (org-babel-do-load-languages
  'org-babel-load-languages
  '((emacs-lisp . t)
@@ -1063,49 +1079,53 @@ Position the cursor at it's beginning, according to the current mode."
 *** Headers
 #+begin_src emacs-lisp
   ;; company-c-headers
-  (defvar cpp-system-includes (split-string
-                               ;; Output of echo "" | g++ -v -x c++ -E -
-                               ;; Use absolute paths
-  (slurp (concat my-project-dir ".global-includes"))))
-  ;; Local includes (below in projectile per project)
-  (defvar cpp-local-includes (split-string
-                              "
-  .
-  inc
-  .ext
-  "
-                              ))
+  (defvar cpp-system-includes 
+    (let ((file (concat my-project-dir ".global-includes")))
+      (if (file-exists-p file)
+      (split-string
+                                 ;; Output of echo "" | g++ -v -x c++ -E -
+                                 ;; Use absolute paths
+       (slurp (concat my-project-dir ".global-includes")))
+      nil)))
+    ;; Local includes (below in projectile per project)
+    (defvar cpp-local-includes (split-string
+                                "
+    .
+    inc
+    .ext
+    "
+                                ))
 
-  (require 'company-c-headers)
-  (add-to-list 'company-backends 'company-c-headers)
-  (setq company-c-headers-path-system nil company-c-headers-path-user nil)
-  (semantic-reset-system-include 'c++-mode)
-  (semantic-gcc-setup)
+    (require 'company-c-headers)
+    (add-to-list 'company-backends 'company-c-headers)
+    (setq company-c-headers-path-system nil company-c-headers-path-user nil)
+    (semantic-reset-system-include 'c++-mode)
+    (semantic-gcc-setup)
 
-  ;; Global includes
-  ;; (mapc (lambda (x)
-  ;;           (add-to-list 'company-c-headers-path-system x)
-  ;;           (semantic-add-system-include x 'c++-mode))
-  ;;         cpp-system-includes)
+    ;; Global includes
+    ;; (mapc (lambda (x)
+    ;;           (add-to-list 'company-c-headers-path-system x)
+    ;;           (semantic-add-system-include x 'c++-mode))
+    ;;         cpp-system-includes)
 
-  (add-hook 'c++-mode-hook
-  (lambda ()
-  (hack-local-variables)
-  (let ((local (concat default-directory ".local-includes"))
-        (global (concat default-directory ".local-includes")))
-  (when (file-exists-p local)
-  (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
-        (split-string (slurp local))))
-  (when (file-exists-p global)
-    (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
-          (split-string (slurp global)))))))
+    (add-hook 'c++-mode-hook
+    (lambda ()
+    (hack-local-variables)
+    (let ((local (concat default-directory ".local-includes"))
+          (global (concat default-directory ".local-includes")))
+    (when (file-exists-p local)
+    (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
+          (split-string (slurp local))))
+    (when (file-exists-p global)
+      (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
+            (split-string (slurp global)))))))
 
-  ;; (defvar cpp-local-includes (list "." "inc"))
-  ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
-  ;; For Cedet
-  ;; Project settings for CEDET
-  (load (concat my-project-dir "projects.el"))
-
+    ;; (defvar cpp-local-includes (list "." "inc"))
+    ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
+    ;; For Cedet
+    ;; Project settings for CEDET
+    (load (concat my-project-dir "projects.el"))
+  )
 #+end_src
 *** Code folding
 #+BEGIN_SRC emacs-lisp
