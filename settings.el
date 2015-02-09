@@ -263,12 +263,36 @@
 (global-set-key (kbd "C-c t") 'sr-speedbar-toggle)
 
 ;; Abreviations for emails
-(setq abbrev-file-name
-(concat user-emacs-directory "abbrev_defs.el"))
-(if (file-exists-p abbrev-file-name)
-    (quietly-read-abbrev-file))
-;(add-hook 'text-mode-hook 'abbrev-mode)
-(add-to-list 'auto-mode-alist '("\\.outlook\\'" . abbrev-mode))
+  (setq abbrev-file-name
+  (concat user-emacs-directory "abbrev_defs.el"))
+  (if (file-exists-p abbrev-file-name)
+      (quietly-read-abbrev-file))
+  ;(add-hook 'text-mode-hook 'abbrev-mode)
+  (add-to-list 'auto-mode-alist '("\\.outlook\\'" . text-mode))
+  (defvar auto-minor-mode-alist ()
+    "Alist of filename patterns vs corresponding minor mode functions, see `auto-mode-alist'
+  All elements of this alist are checked, meaning you can enable multiple minor modes for the same regexp.")
+  (defun enable-minor-mode-based-on-extension ()
+    "Check file name against auto-minor-mode-alist to enable minor modes.
+  The checking happens for all pairs in auto-minor-mode-alist"
+    (when buffer-file-name
+      (let ((name buffer-file-name)
+            (remote-id (file-remote-p buffer-file-name))
+            (alist auto-minor-mode-alist))
+        ;; Remove backup-suffixes from file name.
+        (setq name (file-name-sans-versions name))
+        ;; Remove remote file name identification.
+        (when (and (stringp remote-id)
+                   (string-match-p (regexp-quote remote-id) name))
+          (setq name (substring name (match-end 0))))
+        (while (and alist (caar alist) (cdar alist))
+          (if (string-match (caar alist) name)
+              (funcall (cdar alist) 1))
+          (setq alist (cdr alist))))))
+
+(add-hook 'find-file-hook 'enable-minor-mode-based-on-extension)
+(add-to-list 'auto-minor-mode-alist '("\\.outlook\\'" . flyspell-mode))
+(add-to-list 'auto-minor-mode-alist '("\\.outlook\\'" . abbrev-mode))
 
 ;(require 'ibuffer)
 ;(global-set-key (kbd "C-x C-b") 'ibuffer-other-window) ;'ibuffer)
@@ -301,6 +325,7 @@
 (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
 (setq mc/cmds-to-run-for-all mc--default-cmds-to-run-for-all)
+(add-to-list 'mc/cmds-to-run-for-all 'org-self-insert-command)
 
 (defun show-file-name ()
   "Show the full path file name in the minibuffer."
@@ -644,6 +669,7 @@ Position the cursor at it's beginning, according to the current mode."
    (ditaa . t)))
 (setq org-src-fontify-natively t)
 (setq org-src-tab-acts-natively t)
+
 ;; For keeping buffers up-to-date with tangled files
 ;; (global-auto-revert-mode t)
 (defun revert-all-buffers ()
@@ -659,6 +685,7 @@ Position the cursor at it's beginning, according to the current mode."
 (setq list (cdr list))
 (setq buffer (car list))))
 (message "Refreshed open files"))
+
 ;; For tangling code automatically when saving org-files
 (defun tangle-on-save ()
 "Extract source code from org-files upon saving."
@@ -669,6 +696,9 @@ Position the cursor at it's beginning, according to the current mode."
 (lambda ()
 (add-hook 'after-save-hook
 'tangle-on-save 'make-it-local)))
+
+(global-set-key (kbd "M-<down>") 'org-table-move-row-down)
+(global-set-key (kbd "M-<up>") 'org-table-move-row-up)
 
 (require 'company)
 (add-hook 'after-init-hook 'global-company-mode)
@@ -984,14 +1014,14 @@ Position the cursor at it's beginning, according to the current mode."
 (define-key c++-mode-map  [(ctrl tab)] 'moo-complete)
 
 ;; company-c-headers
-;; (defvar cpp-system-includes 
-;;   (let ((file (concat my-project-dir ".global-includes")))
-;;     (if (file-exists-p file)
-;;     (split-string
-;;                                ;; Output of echo "" | g++ -v -x c++ -E -
-;;                                ;; Use absolute paths
-;;      (slurp (concat my-project-dir ".global-includes")))
-;;     nil)))
+(defvar cpp-system-includes 
+  (let ((file (concat my-project-dir ".global-includes")))
+    (if (file-exists-p file)
+    (split-string
+                               ;; Output of echo "" | g++ -v -x c++ -E -
+                               ;; Use absolute paths
+     (slurp (concat my-project-dir ".global-includes")))
+    nil)))
   ;; Local includes (below in projectile per project)
   (defvar cpp-local-includes (split-string
                               "
@@ -1030,7 +1060,6 @@ Position the cursor at it's beginning, according to the current mode."
   ;; For Cedet
   ;; Project settings for CEDET
   (load (concat my-project-dir "projects.el"))
-)
 
 (add-hook 'c-mode-common-hook 'hs-minor-mode)
 

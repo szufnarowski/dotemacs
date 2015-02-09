@@ -310,13 +310,38 @@
 * Editing
 ** Emails / Abbreviations
 #+BEGIN_SRC emacs-lisp
-;; Abreviations for emails
-(setq abbrev-file-name
-(concat user-emacs-directory "abbrev_defs.el"))
-(if (file-exists-p abbrev-file-name)
-    (quietly-read-abbrev-file))
-;(add-hook 'text-mode-hook 'abbrev-mode)
-(add-to-list 'auto-mode-alist '("\\.outlook\\'" . abbrev-mode))
+    ;; Abreviations for emails
+    (setq abbrev-file-name
+    (concat user-emacs-directory "abbrev_defs.el"))
+    (if (file-exists-p abbrev-file-name)
+        (quietly-read-abbrev-file))
+    ;(add-hook 'text-mode-hook 'abbrev-mode)
+    (add-to-list 'auto-mode-alist '("\\.outlook\\'" . text-mode))
+    (defvar auto-minor-mode-alist ()
+      "Alist of filename patterns vs corresponding minor mode functions, see `auto-mode-alist'
+    All elements of this alist are checked, meaning you can enable multiple minor modes for the same regexp.")
+    (defun enable-minor-mode-based-on-extension ()
+      "Check file name against auto-minor-mode-alist to enable minor modes.
+    The checking happens for all pairs in auto-minor-mode-alist"
+      (when buffer-file-name
+        (let ((name buffer-file-name)
+              (remote-id (file-remote-p buffer-file-name))
+              (alist auto-minor-mode-alist))
+          ;; Remove backup-suffixes from file name.
+          (setq name (file-name-sans-versions name))
+          ;; Remove remote file name identification.
+          (when (and (stringp remote-id)
+                     (string-match-p (regexp-quote remote-id) name))
+            (setq name (substring name (match-end 0))))
+          (while (and alist (caar alist) (cdar alist))
+            (if (string-match (caar alist) name)
+                (funcall (cdar alist) 1))
+            (setq alist (cdr alist))))))
+
+  (add-hook 'find-file-hook 'enable-minor-mode-based-on-extension)
+  (add-to-list 'auto-minor-mode-alist '("\\.outlook\\'" . flyspell-mode))
+  (add-to-list 'auto-minor-mode-alist '("\\.outlook\\'" . abbrev-mode))
+
 #+END_SRC
 ** Ibuffer
 #+BEGIN_SRC emacs-lisp
@@ -355,6 +380,7 @@
 (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
 (setq mc/cmds-to-run-for-all mc--default-cmds-to-run-for-all)
+(add-to-list 'mc/cmds-to-run-for-all 'org-self-insert-command)
 #+END_SRC
 ** Windows
 #+BEGIN_SRC emacs-lisp
@@ -696,41 +722,46 @@ Position the cursor at it's beginning, according to the current mode."
    
 * Org
 #+BEGIN_SRC emacs-lisp
-(add-hook 'org-mode-hook
-          (lambda ()
-            (org-indent-mode t))
-          t)
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (ditaa . t)))
-(setq org-src-fontify-natively t)
-(setq org-src-tab-acts-natively t)
-;; For keeping buffers up-to-date with tangled files
-;; (global-auto-revert-mode t)
-(defun revert-all-buffers ()
-"Refreshes all open buffers from their respective files"
-(interactive)
-(let* ((list (buffer-list))
-(buffer (car list)))
-(while buffer
-(when (and (buffer-file-name buffer)
-(not (buffer-modified-p buffer)))
-(set-buffer buffer)
-(revert-buffer t t t))
-(setq list (cdr list))
-(setq buffer (car list))))
-(message "Refreshed open files"))
-;; For tangling code automatically when saving org-files
-(defun tangle-on-save ()
-"Extract source code from org-files upon saving."
-(message "Tangling sources...")
-(org-babel-tangle)
-(revert-all-buffers))
-(add-hook 'org-mode-hook
-(lambda ()
-(add-hook 'after-save-hook
-'tangle-on-save 'make-it-local)))
+    (add-hook 'org-mode-hook
+              (lambda ()
+                (org-indent-mode t))
+              t)
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((emacs-lisp . t)
+       (ditaa . t)))
+    (setq org-src-fontify-natively t)
+    (setq org-src-tab-acts-natively t)
+  (setq org-export-html-postamble nil)
+    ;; For keeping buffers up-to-date with tangled files
+    ;; (global-auto-revert-mode t)
+    (defun revert-all-buffers ()
+    "Refreshes all open buffers from their respective files"
+    (interactive)
+    (let* ((list (buffer-list))
+    (buffer (car list)))
+    (while buffer
+    (when (and (buffer-file-name buffer)
+    (not (buffer-modified-p buffer)))
+    (set-buffer buffer)
+    (revert-buffer t t t))
+    (setq list (cdr list))
+    (setq buffer (car list))))
+    (message "Refreshed open files"))
+
+    ;; For tangling code automatically when saving org-files
+    (defun tangle-on-save ()
+    "Extract source code from org-files upon saving."
+    (message "Tangling sources...")
+    (org-babel-tangle)
+    (revert-all-buffers))
+    (add-hook 'org-mode-hook
+    (lambda ()
+    (add-hook 'after-save-hook
+    'tangle-on-save 'make-it-local)))
+
+    (global-set-key (kbd "M-<down>") 'org-table-move-row-down)
+    (global-set-key (kbd "M-<up>") 'org-table-move-row-up)
 #+END_SRC
 * Autocomplete
 ** Company
@@ -1238,3 +1269,4 @@ projectile-project-root-files-bottom-up
 
 
 #+END_SRC
+
