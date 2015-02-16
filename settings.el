@@ -660,45 +660,45 @@ Position the cursor at it's beginning, according to the current mode."
 (global-set-key (kbd "M-o") 'open-line)
 
 (add-hook 'org-mode-hook
-          (lambda ()
-            (org-indent-mode t))
-          t)
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '((emacs-lisp . t)
-   (ditaa . t)))
-(setq org-src-fontify-natively t)
-(setq org-src-tab-acts-natively t)
+            (lambda ()
+              (org-indent-mode t))
+            t)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (ditaa . t)))
+  (setq org-src-fontify-natively t)
+  (setq org-src-tab-acts-natively t)
+(setq org-export-html-postamble nil)
+  ;; For keeping buffers up-to-date with tangled files
+  ;; (global-auto-revert-mode t)
+  (defun revert-all-buffers ()
+  "Refreshes all open buffers from their respective files"
+  (interactive)
+  (let* ((list (buffer-list))
+  (buffer (car list)))
+  (while buffer
+  (when (and (buffer-file-name buffer)
+  (not (buffer-modified-p buffer)))
+  (set-buffer buffer)
+  (revert-buffer t t t))
+  (setq list (cdr list))
+  (setq buffer (car list))))
+  (message "Refreshed open files"))
 
-;; For keeping buffers up-to-date with tangled files
-;; (global-auto-revert-mode t)
-(defun revert-all-buffers ()
-"Refreshes all open buffers from their respective files"
-(interactive)
-(let* ((list (buffer-list))
-(buffer (car list)))
-(while buffer
-(when (and (buffer-file-name buffer)
-(not (buffer-modified-p buffer)))
-(set-buffer buffer)
-(revert-buffer t t t))
-(setq list (cdr list))
-(setq buffer (car list))))
-(message "Refreshed open files"))
+  ;; For tangling code automatically when saving org-files
+  (defun tangle-on-save ()
+  "Extract source code from org-files upon saving."
+  (message "Tangling sources...")
+  (org-babel-tangle)
+  (revert-all-buffers))
+  (add-hook 'org-mode-hook
+  (lambda ()
+  (add-hook 'after-save-hook
+  'tangle-on-save 'make-it-local)))
 
-;; For tangling code automatically when saving org-files
-(defun tangle-on-save ()
-"Extract source code from org-files upon saving."
-(message "Tangling sources...")
-(org-babel-tangle)
-(revert-all-buffers))
-(add-hook 'org-mode-hook
-(lambda ()
-(add-hook 'after-save-hook
-'tangle-on-save 'make-it-local)))
-
-(global-set-key (kbd "M-<down>") 'org-table-move-row-down)
-(global-set-key (kbd "M-<up>") 'org-table-move-row-up)
+  (global-set-key (kbd "M-<down>") 'org-table-move-row-down)
+  (global-set-key (kbd "M-<up>") 'org-table-move-row-up)
 
 (require 'company)
 (add-hook 'after-init-hook 'global-company-mode)
@@ -1014,52 +1014,60 @@ Position the cursor at it's beginning, according to the current mode."
 (define-key c++-mode-map  [(ctrl tab)] 'moo-complete)
 
 ;; company-c-headers
-(defvar cpp-system-includes 
-  (let ((file (concat my-project-dir ".global-includes")))
-    (if (file-exists-p file)
-    (split-string
-                               ;; Output of echo "" | g++ -v -x c++ -E -
-                               ;; Use absolute paths
-     (slurp (concat my-project-dir ".global-includes")))
-    nil)))
-  ;; Local includes (below in projectile per project)
-  (defvar cpp-local-includes (split-string
-                              "
-  .
-  inc
-  .ext
-  "
-                              ))
+  ;; (defvar cpp-system-includes 
+  ;;   (let ((file (concat my-project-dir ".global-includes")))
+  ;;     (if (file-exists-p file)
+  ;;     (split-string
+  ;;                                ;; Output of echo "" | g++ -v -x c++ -E -
+  ;;                                ;; Use absolute paths
+  ;;      (slurp file))
+  ;;     nil)))
+  ;;   ;; Local includes (below in projectile per project)
+  ;;   (defvar cpp-local-includes (split-string
+  ;;                               "
+  ;;   .
+  ;;   inc
+  ;;   .ext
+  ;;   "
+  ;;                               ))
 
-  (require 'company-c-headers)
-  (add-to-list 'company-backends 'company-c-headers)
-  (setq company-c-headers-path-system nil company-c-headers-path-user nil)
-  (semantic-reset-system-include 'c++-mode)
-  (semantic-gcc-setup)
+    (require 'company-c-headers)
+    (add-to-list 'company-backends 'company-c-headers)
+    (setq company-c-headers-path-system nil company-c-headers-path-user nil)
+    (semantic-reset-system-include 'c++-mode)
+    (semantic-gcc-setup)
 
-  ;; Global includes
-  ;; (mapc (lambda (x)
-  ;;           (add-to-list 'company-c-headers-path-system x)
-  ;;           (semantic-add-system-include x 'c++-mode))
-  ;;         cpp-system-includes)
+    ;; Global includes
+    ;; (mapc (lambda (x)
+    ;;           (add-to-list 'company-c-headers-path-system x)
+    ;;           (semantic-add-system-include x 'c++-mode))
+    ;;         cpp-system-includes)
 
-  (add-hook 'c++-mode-hook
-  (lambda ()
-  (hack-local-variables)
-  (let ((local (concat default-directory ".local-includes"))
-        (global (concat default-directory ".local-includes")))
-  (when (file-exists-p local)
-  (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
-        (split-string (slurp local))))
-  (when (file-exists-p global)
-    (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
-          (split-string (slurp global)))))))
+    
+    (add-hook 'c++-mode-hook
+    (lambda ()
+    (hack-local-variables)
+    (let ((local (concat default-directory ".local-includes"))
+          (global (concat default-directory ".global-includes")))
+    (when (file-exists-p local)
+    (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
+          (split-string (slurp local))))
+    (when (file-exists-p global)
+      (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
+            (split-string (slurp global))))))
 
-  ;; (defvar cpp-local-includes (list "." "inc"))
-  ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
-  ;; For Cedet
-  ;; Project settings for CEDET
-  (load (concat my-project-dir "projects.el"))
+(setq company-backends '((company-c-headers company-dabbrev-code company-dabbrev company-keywords company-gtags))))
+
+;; Also add clang includes for flycheck usage
+;;(add-hook 'c++-mode-hook
+;;          (lambda () (setq flycheck-clang-include-path
+;;                           (list (expand-file-name "~/local/include/")))))
+
+    ;; (defvar cpp-local-includes (list "." "inc"))
+    ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
+    ;; For Cedet
+    ;; Project settings for CEDET
+    (load (concat my-project-dir "projects.el"))
 
 (add-hook 'c-mode-common-hook 'hs-minor-mode)
 

@@ -1110,22 +1110,22 @@ Position the cursor at it's beginning, according to the current mode."
 *** Headers
 #+begin_src emacs-lisp
   ;; company-c-headers
-  (defvar cpp-system-includes 
-    (let ((file (concat my-project-dir ".global-includes")))
-      (if (file-exists-p file)
-      (split-string
-                                 ;; Output of echo "" | g++ -v -x c++ -E -
-                                 ;; Use absolute paths
-       (slurp (concat my-project-dir ".global-includes")))
-      nil)))
-    ;; Local includes (below in projectile per project)
-    (defvar cpp-local-includes (split-string
-                                "
-    .
-    inc
-    .ext
-    "
-                                ))
+  ;; (defvar cpp-system-includes 
+  ;;   (let ((file (concat my-project-dir ".global-includes")))
+  ;;     (if (file-exists-p file)
+  ;;     (split-string
+  ;;                                ;; Output of echo "" | g++ -v -x c++ -E -
+  ;;                                ;; Use absolute paths
+  ;;      (slurp file))
+  ;;     nil)))
+  ;;   ;; Local includes (below in projectile per project)
+  ;;   (defvar cpp-local-includes (split-string
+  ;;                               "
+  ;;   .
+  ;;   inc
+  ;;   .ext
+  ;;   "
+  ;;                               ))
 
     (require 'company-c-headers)
     (add-to-list 'company-backends 'company-c-headers)
@@ -1139,24 +1139,32 @@ Position the cursor at it's beginning, according to the current mode."
     ;;           (semantic-add-system-include x 'c++-mode))
     ;;         cpp-system-includes)
 
+    
     (add-hook 'c++-mode-hook
     (lambda ()
     (hack-local-variables)
     (let ((local (concat default-directory ".local-includes"))
-          (global (concat default-directory ".local-includes")))
+          (global (concat default-directory ".global-includes")))
     (when (file-exists-p local)
     (mapc (lambda (x) (add-to-list 'company-c-headers-path-user x))
           (split-string (slurp local))))
     (when (file-exists-p global)
       (mapc (lambda (x) (add-to-list 'company-c-headers-path-system x))
-            (split-string (slurp global)))))))
+            (split-string (slurp global))))))
+
+(setq company-backends '((company-c-headers company-dabbrev-code company-dabbrev company-keywords company-gtags))))
+
+;; Also add clang includes for flycheck usage
+;;(add-hook 'c++-mode-hook
+;;          (lambda () (setq flycheck-clang-include-path
+;;                           (list (expand-file-name "~/local/include/")))))
 
     ;; (defvar cpp-local-includes (list "." "inc"))
     ;; (mapcar (lambda (x) (add-to-list 'company-c-headers-path-user x)) cpp-local-includes)
     ;; For Cedet
     ;; Project settings for CEDET
     (load (concat my-project-dir "projects.el"))
-  
+
 #+end_src
 *** Code folding
 #+BEGIN_SRC emacs-lisp
