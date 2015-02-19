@@ -301,8 +301,8 @@
 
 ;; Use spell check by default
   (setq-default ispell-program-name "C:/Tools/Aspell/bin/aspell.exe")
-  (setq text-mode-hook '(lambda() (flyspell-mode t) ))
-  (setq prog-mode-hook '(lambda() (flyspell-prog-mode) ))
+  (add-hook 'text-mode-hook '(lambda() (flyspell-mode t) ))
+  (add-hook 'prog-mode-hook '(lambda() (flyspell-prog-mode) ))
 ;; switch between english and german
   (defun fd-switch-dictionary()
     (interactive)
@@ -741,11 +741,15 @@ Position the cursor at it's beginning, according to the current mode."
 ;; set appearance of a tab that is represented by 4 spaces
 (setq-default tab-width 4)
 
-;; Compilation
-(global-set-key (kbd "<f5>") (lambda ()
-                               (interactive)
-                               (setq-local compilation-read-command nil)
-                               (call-interactively 'compile)))
+;; Recursive grep
+(defun helm-do-grep-recursive (&optional non-recursive)
+  "Like `helm-do-grep', but greps recursively by default."
+  (interactive "P")
+  (let* ((current-prefix-arg (not non-recursive))
+         (helm-current-prefix-arg non-recursive))
+    (call-interactively 'helm-do-grep)))
+(global-set-key (kbd "C-c C-h") 'helm-do-grep)
+;(global-set-key (kbd "M-g M-s") 'helm-do-grep-recursive)
 
 ;; Package: clean-aindent-mode
 (require 'clean-aindent-mode)
@@ -761,6 +765,45 @@ Position the cursor at it's beginning, according to the current mode."
 
 ;; iEdit mode
 (define-key global-map (kbd "C-c ;") 'iedit-mode)
+
+;; Compile command
+(defun compile-command-hook ()
+  "Construct compile command depending on project structure"
+(require 'compile)
+(interactive)
+(hack-local-variables)
+
+(if (boundp 'default-directory)
+    ;(make-local-variable 'compile-command)
+  (cond
+   ((file-exists-p
+     (concat default-directory "SConstruct"))
+    (set 'compile-command "scons"))
+   ((file-exists-p
+     (concat default-directory "Makefile"))
+    (set 'compile-command "make -k"))
+   (t
+    (set 'compile-command
+         ;; $(CC) -c -o $@ $(CPPFLAGS) $(CFLAGS) $<
+         (let ((file
+                (file-name-nondirectory buffer-file-name)))
+           (format "%s -c -o %s.o %s %s %s"
+                   (or (getenv "CC") "g++")
+                   (file-name-sans-extension file)
+                   (or (getenv "CPPFLAGS") "-DDEBUG=9")
+                   (or (getenv "CFLAGS")
+                       "-pedantic -Wall -g")
+                   file))))
+   ))
+(local-set-key (kbd "<f7>") 'compile)
+)
+(add-hook 'prog-mode-hook 'compile-command-hook)
+
+          
+          ;; (local-set-key (kbd "<f5>") (lambda ()
+          ;;                                (interactive)
+          ;;                                (setq-local compilation-read-command nil)
+          ;;                                (call-interactively 'compile)))
 
 ;; Package: smartparens
 (require 'smartparens-config)
@@ -1010,6 +1053,11 @@ Position the cursor at it's beginning, according to the current mode."
 
 (require 'function-args)
 (fa-config-default)
+;; Redefine default key-bindings (do not shadow upcase-word binding)
+(eval-after-load "function-args"
+'(progn
+ (define-key function-args-mode-map (kbd "M-u") (kbd "C-u"))
+))
 (define-key c-mode-map  [(ctrl tab)] 'moo-complete)
 (define-key c++-mode-map  [(ctrl tab)] 'moo-complete)
 
