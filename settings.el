@@ -342,6 +342,18 @@
    (concat "/e,/select," (convert-standard-filename buffer-file-name))))
 (global-set-key [f12] 'explorer)
 
+(defun transpose-windows (arg)
+  "Transpose the buffers shown in two windows."
+  (interactive "p")
+  (let ((selector (if (>= arg 0) 'next-window 'previous-window)))
+    (while (/= arg 0)
+      (let ((this-win (window-buffer))
+            (next-win (window-buffer (funcall selector))))
+        (set-window-buffer (selected-window) next-win)
+        (set-window-buffer (funcall selector) this-win)
+        (select-window (funcall selector)))
+      (setq arg (if (plusp arg) (1- arg) (1+ arg))))))
+
 ;;(setq fill-column 70)
 (setq-default default-tab-width 4)
 
@@ -797,7 +809,7 @@ Position the cursor at it's beginning, according to the current mode."
    ))
 (local-set-key (kbd "<f7>") 'compile)
 )
-(add-hook 'prog-mode-hook 'compile-command-hook)
+(add-hook 'c-mode-common-hook 'compile-command-hook)
 
           
           ;; (local-set-key (kbd "<f5>") (lambda ()
@@ -1056,7 +1068,7 @@ Position the cursor at it's beginning, according to the current mode."
 ;; Redefine default key-bindings (do not shadow upcase-word binding)
 (eval-after-load "function-args"
 '(progn
- (define-key function-args-mode-map (kbd "M-u") (kbd "C-u"))
+ (define-key function-args-mode-map (kbd "M-u") (kbd "M-i"))
 ))
 (define-key c-mode-map  [(ctrl tab)] 'moo-complete)
 (define-key c++-mode-map  [(ctrl tab)] 'moo-complete)
